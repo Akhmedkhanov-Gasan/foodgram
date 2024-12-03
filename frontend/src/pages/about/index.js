@@ -3,14 +3,14 @@ import styles from './styles.module.css'
 import MetaTags from 'react-meta-tags'
 
 const About = ({ updateOrders, orders }) => {
-  
+
   return <Main>
     <MetaTags>
       <title>О проекте</title>
       <meta name="description" content="Фудграм - О проекте" />
       <meta property="og:title" content="О проекте" />
     </MetaTags>
-    
+
     <Container>
       <h1 className={styles.title}>Привет!</h1>
       <div className={styles.content}>
@@ -25,11 +25,19 @@ const About = ({ updateOrders, orders }) => {
               приготовления блюда, просмотреть рецепты друзей и добавить любимые рецепты в список избранных.
             </p>
             <p className={styles.textItem}>
-              Чтобы использовать все возможности сайта — нужна регистрация. Проверка адреса электронной почты не осуществляется, вы можете ввести любой email. 
+              Чтобы использовать все возможности сайта — нужна регистрация. Проверка адреса электронной почты не осуществляется, вы можете ввести любой email.
             </p>
             <p className={styles.textItem}>
-              Заходите и делитесь своими любимыми рецептами!
+              Заходите и делитесь своими любимыми рецептами! Делайте этот проект ещё лучше, оставляя свои пожелания или предложения.
             </p>
+            {/* Добавление изображения */}
+            <div className={styles.imageContainer}>
+              <img
+                src="/about.jpg"
+                alt="Иллюстрация о проекте"
+                className={styles.aboutImage}
+              />
+            </div>
           </div>
         </div>
         <aside>
@@ -38,18 +46,19 @@ const About = ({ updateOrders, orders }) => {
           </h2>
           <div className={styles.text}>
             <p className={styles.textItem}>
-              Код проекта находится тут - <a href="#" className={styles.textLink}>Github</a>
+              Код проекта находится тут - <a href="https://github.com/Akhmedkhanov-Gasan/foodgram" className={styles.textLink} target="_blank" rel="noopener noreferrer">Github</a>
             </p>
             <p className={styles.textItem}>
-              Автор проекта: <a href="#" className={styles.textLink}>Имя Автора</a>
+              Автор проекта: <a href="https://github.com/Akhmedkhanov-Gasan" className={styles.textLink} target="_blank" rel="noopener noreferrer">Ахмедханов Гасан</a>
+            </p>
+            <p className={styles.textItem}>
+              Если у вас есть идеи, как улучшить этот сайт, или вы нашли баги — пишите напрямую на странице автора.
             </p>
           </div>
         </aside>
       </div>
-      
     </Container>
   </Main>
 }
 
 export default About
-
