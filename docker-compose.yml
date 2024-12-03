@@ -18,6 +18,8 @@ services:
     volumes:
       - static:/backend_static/
       - media:/app/media/
+    depends_on:
+      - db
   frontend:
     build: ./frontend/
     image: agasan/foodgram_frontend
@@ -34,3 +36,6 @@ services:
     volumes:
       - static:/static/
       - media:/app/media/
+    depends_on:
+      - backend
+      - frontend

@@ -16,7 +16,7 @@ jobs:
         image: postgres:13.10
         env:
           POSTGRES_USER: foodgram_user
-          POSTGRES_PASSWORD: foodgram_password
+          POSTGRES_PASSWORD: your_password
           POSTGRES_DB: foodgram
         ports:
           - 5432:5432
@@ -35,7 +35,7 @@ jobs:
       - name: Test with flake8 and django tests
         env:
           POSTGRES_USER: foodgram_user
-          POSTGRES_PASSWORD: foodgram_password
+          POSTGRES_PASSWORD: your_password
           POSTGRES_DB: foodgram
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
