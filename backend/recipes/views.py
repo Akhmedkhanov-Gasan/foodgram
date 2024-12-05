@@ -7,7 +7,6 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from users.pagination import CustomLimitOffsetPagination
 
 from .models import Ingredient, Recipe, Tag
 from .permissions import IsAuthorOrReadOnly
@@ -25,7 +24,6 @@ class RecipeViewSet(
 ):
     """ViewSet for managing recipes."""
     queryset = Recipe.objects.all()
-    pagination_class = CustomLimitOffsetPagination
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -62,6 +60,9 @@ class RecipeViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        # Sorting by publication date at the ORM level
+        queryset = queryset.order_by('-id')
 
         # Filtering by author
         author_id = self.request.query_params.get('author')
@@ -240,7 +241,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
-    pagination_class = CustomLimitOffsetPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
