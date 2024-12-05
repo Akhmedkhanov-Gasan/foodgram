@@ -10,7 +10,7 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
 
 1. Clone the repository to your computer:
     ```
-    git clone git@github.com:YourUsername/foodgram_project.git
+    git clone git@github.com:Akhmedkhanov-Gasan/foodgram.git
     ```
 
 2. Create a `.env` file and fill it with your configuration data. All required variables are listed in the `.env.example` file located in the project's root directory.
@@ -60,10 +60,10 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
     sudo apt install docker-compose
     ```
 
-4. Copy the `docker-compose.production.yml` and `.env` files to the `foodgram/` directory on the server:
+4. Copy the `docker-compose.yml` and `.env` files to the `foodgram/` directory on the server:
 
     ```
-    scp -i PATH_TO_SSH_KEY/SSH_KEY_NAME docker-compose.production.yml YOUR_USERNAME@SERVER_IP_ADDRESS:/home/YOUR_USERNAME/foodgram/docker-compose.production.yml
+    scp -i PATH_TO_SSH_KEY/SSH_KEY_NAME docker-compose.yml YOUR_USERNAME@SERVER_IP_ADDRESS:/home/YOUR_USERNAME/foodgram/docker-compose.yml
     scp -i PATH_TO_SSH_KEY/SSH_KEY_NAME .env YOUR_USERNAME@SERVER_IP_ADDRESS:/home/YOUR_USERNAME/foodgram/.env
     ```
     
@@ -76,15 +76,15 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
 5. Run Docker Compose in detached mode:
 
     ```
-    sudo docker compose -f docker-compose.production.yml up -d
+    sudo docker compose -f docker-compose.yml up -d
     ```
 
 6. Run migrations, collect static files for the backend, and copy them to `/backend_static/static/`:
 
     ```
-    sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
-    sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
-    sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+    sudo docker compose -f docker-compose.yml exec backend python manage.py migrate
+    sudo docker compose -f docker-compose.yml exec backend python manage.py collectstatic
+    sudo docker compose -f docker-compose.yml exec backend cp -r /app/collected_static/. /backend_static/static/
     ```
 
 7. Open the Nginx configuration file with `nano`:
@@ -136,7 +136,7 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
     DOCKER_PASSWORD                # DockerHub password
     HOST                           # Server IP address
     USER                           # Server username
-    SSH_KEY                        # Content of the private SSH key (cat ~/.ssh/id_rsa)
+    SSH_KEY                        # Content of the private SSH key
     SSH_PASSPHRASE                 # SSH key passphrase
 
     TELEGRAM_TO                    # Your Telegram account ID (use @userinfobot, command /start)
