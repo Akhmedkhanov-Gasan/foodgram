@@ -139,6 +139,7 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
     SSH_KEY                        # Content of the private SSH key
     SSH_PASSPHRASE                 # SSH key passphrase
 
+   
     TELEGRAM_TO                    # Your Telegram account ID (use @userinfobot, command /start)
     TELEGRAM_TOKEN                 # Bot token (get it from @BotFather, command /token, bot name)
     ```
