@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class InteractionsConfig(AppConfig):
+class ApiConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'interactions'
+    name = 'api'

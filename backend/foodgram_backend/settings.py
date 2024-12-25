@@ -2,31 +2,72 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from django.core.management.utils import get_random_secret_key
-from dotenv import load_dotenv
+# from django.core.management.utils import get_random_secret_key
+# from dotenv import load_dotenv
+#
+# load_dotenv()
+#
+# BASE_DIR = Path(__file__).resolve().parent.parent
+#
+# SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
+#
+# DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+#
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+#
+# CORS_ORIGIN_ALLOW_ALL = False
+# CORS_ALLOWED_ORIGINS = [
+#     'https://foodgram.myddns.me',
+#     'http://62.84.121.131',
+# ]
+#
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost',
+#     'http://127.0.0.1',
+#     'https://foodgram.servehttp.com',
+# ]
 
-load_dotenv()
 
+# -----------------LOCAL-------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', get_random_secret_key())
+SECRET_KEY = 'django-insecure-7)^gdnzldweiz(zzb%3qmtiip_i=oxks+fczrcuirfnqd*_x2k'
 
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+ALLOWED_HOSTS = []
 
-CORS_ORIGIN_ALLOW_ALL = False
+CORS_URLS_REGEX = r'^/api/.*$'
 CORS_ALLOWED_ORIGINS = [
-    'https://foodgram.myddns.me',
-    'http://62.84.121.131',
+    'http://localhost:3000',
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost',
-    'http://127.0.0.1',
-    "https://foodgram.servehttp.com",
-]
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# -----------------LOCAL-------------------------
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -35,6 +76,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
+    'djoser',
 
     'rest_framework',
     'corsheaders',
@@ -42,7 +85,7 @@ INSTALLED_APPS = [
 
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
-    'interactions.apps.InteractionsConfig',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -77,16 +120,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram_backend.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'foodgram'),
-        'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', ''),
-        'PORT': os.getenv('DB_PORT', 5432),
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB', 'foodgram'),
+#         'USER': os.getenv('POSTGRES_USER', 'foodgram_user'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+#         'HOST': os.getenv('DB_HOST', ''),
+#         'PORT': os.getenv('DB_PORT', 5432),
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -111,20 +154,23 @@ STATIC_ROOT = BASE_DIR / 'collected_static'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.authentication.CustomTokenAuthentication'
+        'rest_framework_simplejwt.authentication.JWTAuthentication'
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'recipes.pagination.PageToLimitOffsetPagination',
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.PageToLimitOffsetPagination',
     'PAGE_SIZE': 6,
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
+
+DEFAULT_PAGINATION_LIMIT = 10
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_TYPES': ('Token',),
 }
 
 DJOSER = {
@@ -133,9 +179,9 @@ DJOSER = {
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': False,
     'SEND_CONFIRMATION_EMAIL': False,
     'SERIALIZERS': {
-        'user_create': 'users.serializers.CustomUserCreateSerializer',
-        'user': 'users.serializers.CustomUserSerializer',
-        'current_user': 'users.serializers.CustomUserSerializer',
+        'user_create': 'api.users.serializers.CustomUserCreateSerializer',
+        'user': 'api.users.serializers.CustomUserSerializer',
+        'current_user': 'api.users.serializers.CustomUserSerializer',
     },
 }
 
@@ -152,21 +198,3 @@ USE_L10N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-}

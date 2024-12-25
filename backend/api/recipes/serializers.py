@@ -1,29 +1,14 @@
-import base64
-import uuid
-
-from django.core.files.base import ContentFile
-from interactions.models import Interaction
 from rest_framework import serializers
-from users.serializers import CustomUserSerializer
 
-from .models import Ingredient, Recipe, RecipeIngredient, Tag
-
-
-class Base64ImageField(serializers.ImageField):
-    """Field for decoding an image from Base64."""
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(
-                base64.b64decode(imgstr),
-                name=f'{uuid.uuid4()}.{ext}'
-            )
-        return super().to_internal_value(data)
+from api.users.serializers import CustomUserSerializer
+from api.utils import Base64ImageField
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Serializer for ingredients."""
+
     class Meta:
         model = Ingredient
         fields = ['id', 'name', 'measurement_unit']
@@ -31,6 +16,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class TagSerializer(serializers.ModelSerializer):
     """Serializer for tags."""
+
     class Meta:
         model = Tag
         fields = ['id', 'name', 'slug']
@@ -38,6 +24,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     """Serializer for recipe-ingredient relation."""
+
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
         source='ingredient'
@@ -55,6 +42,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating a recipe."""
+
     ingredients = RecipeIngredientSerializer(
         many=True,
         source='recipe_ingredients'
@@ -68,12 +56,21 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = [
-            'id', 'name', 'text', 'image',
-            'ingredients', 'tags', 'cooking_time'
+            'id',
+            'name',
+            'text',
+            'image',
+            'ingredients',
+            'tags',
+            'cooking_time'
         ]
 
+    def validate_tags(self, tags):
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError("Tags must be unique.")
+        return tags
+
     def validate_ingredients(self, ingredients):
-        """Validate ingredients for correctness."""
         if not ingredients:
             raise serializers.ValidationError(
                 "The ingredient list cannot be empty."
@@ -94,7 +91,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return ingredients
 
     def validate(self, attrs):
-        """General validation of recipe data."""
         if not attrs.get('recipe_ingredients'):
             raise serializers.ValidationError(
                 {"ingredients": "Ingredients are required."}
@@ -104,7 +100,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def save_ingredients(self, recipe, ingredients_data):
-        """Save ingredients for the recipe."""
         RecipeIngredient.objects.bulk_create([
             RecipeIngredient(
                 recipe=recipe,
@@ -127,22 +122,18 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags', None)
 
-        # Update recipe data
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
         instance.cooking_time = validated_data.get(
-            'cooking_time',
-            instance.cooking_time
+            'cooking_time', instance.cooking_time
         )
         if validated_data.get('image'):
             instance.image = validated_data.get('image')
         instance.save()
 
-        # Update tags
         if tags_data is not None:
             instance.tags.set(tags_data)
 
-        # Update ingredients
         if ingredients_data is not None:
             self.validate_ingredients(ingredients_data)
             instance.recipe_ingredients.all().delete()
@@ -151,16 +142,15 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        """Use detailed RecipeSerializer for data representation."""
         return RecipeSerializer(instance, context=self.context).data
 
 
 class RecipeSerializer(serializers.ModelSerializer):
     """Serializer for recipes."""
+
     author = CustomUserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
-        many=True,
-        source='recipe_ingredients'
+        many=True, source='recipe_ingredients'
     )
     tags = TagSerializer(many=True)
     is_favorited = serializers.SerializerMethodField(read_only=True)
@@ -177,18 +167,27 @@ class RecipeSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
         if user.is_authenticated:
-            return Interaction.objects.filter(
-                user=user,
-                recipe=obj,
-                interaction_type=Interaction.FAVORITE
-            ).exists()
+            return Favorite.objects.filter(user=user, recipe=obj).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context.get('request').user
         if user.is_authenticated:
-            return Interaction.objects.filter(
-                user=user, recipe=obj,
-                interaction_type=Interaction.SHOPPING_CART
-            ).exists()
+            return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
         return False
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    """Serializer for the shopping cart."""
+
+    class Meta:
+        model = ShoppingCart
+        fields = ['id', 'recipe']
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """Serializer for managing favorites."""
+
+    class Meta:
+        model = Favorite
+        fields = ['id', 'recipe']
