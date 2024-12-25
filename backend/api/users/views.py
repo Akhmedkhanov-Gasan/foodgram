@@ -1,11 +1,3 @@
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
-from rest_framework.mixins import CreateModelMixin
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
-
 from api.pagination import PageToLimitOffsetPagination
 from api.users.serializers import (AvatarSerializer,
                                    CustomUserCreateSerializer,
@@ -13,7 +5,14 @@ from api.users.serializers import (AvatarSerializer,
                                    PasswordChangeSerializer,
                                    SubscriptionDetailSerializer,
                                    TokenSerializer)
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from recipes.models import Recipe
+from rest_framework.decorators import action
+from rest_framework.mixins import CreateModelMixin
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from users.models import Subscription
 
 User = get_user_model()

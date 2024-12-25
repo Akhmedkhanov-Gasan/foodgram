@@ -1,13 +1,12 @@
+from api.utils import Base64ImageField
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from djoser.serializers import UserCreateSerializer
 from djoser.serializers import UserSerializer as DjoserUserSerializer
+from recipes.models import Recipe
 from rest_framework import serializers
 from rest_framework.serializers import CharField
 from rest_framework_simplejwt.tokens import AccessToken
-
-from api.utils import Base64ImageField
-from recipes.models import Recipe
 from users.models import Subscription
 
 User = get_user_model()
