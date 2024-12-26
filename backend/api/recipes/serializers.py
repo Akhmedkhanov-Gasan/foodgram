@@ -193,11 +193,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        recipe = self.context['recipe']
-        user = self.context['request'].user
-        return ShoppingCart.objects.create(user=user, recipe=recipe)
-
-    def create(self, validated_data):
         """Ensure 'recipe' is set during creation."""
         recipe = self.context['recipe']
         user = self.context['request'].user
