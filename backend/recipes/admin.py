@@ -7,6 +7,7 @@ from .models import (Favorite, Ingredient, Recipe, RecipeIngredient,
 
 class RecipeIngredientInline(admin.TabularInline):
     """Inline display of ingredients in recipes."""
+
     model = RecipeIngredient
     extra = 0
 
@@ -14,6 +15,7 @@ class RecipeIngredientInline(admin.TabularInline):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     """Admin panel for managing recipes."""
+
     list_display = ('name', 'author', 'get_favorites_count', 'cooking_time')
     search_fields = ('name', 'author__username', 'author__email')
     list_filter = ('tags', 'author')
@@ -21,6 +23,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         """Annotate queryset with the number of times recipes are favorited."""
+
         queryset = super().get_queryset(request)
         return queryset.annotate(
             favorites_count=Count('favorited_by')
@@ -28,6 +31,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_favorites_count(self, obj):
         """Display the annotated favorites count."""
+
         return getattr(obj, 'favorites_count', 0)
 
     get_favorites_count.short_description = 'Favorites Count'
@@ -36,6 +40,7 @@ class RecipeAdmin(admin.ModelAdmin):
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     """Admin panel for managing tags."""
+
     list_display = ('name', 'slug')
     search_fields = ('name', 'slug')
 
@@ -43,6 +48,7 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     """Admin panel for managing ingredients."""
+
     list_display = ('name', 'measurement_unit')
     search_fields = ('name',)
 
@@ -50,6 +56,7 @@ class IngredientAdmin(admin.ModelAdmin):
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     """Admin panel for managing favorites."""
+
     list_display = ('user', 'recipe')
     search_fields = ('user__email', 'recipe__name')
 
@@ -57,5 +64,6 @@ class FavoriteAdmin(admin.ModelAdmin):
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
     """Admin panel for managing shopping carts."""
+
     list_display = ('user', 'recipe')
     search_fields = ('user__email', 'recipe__name')

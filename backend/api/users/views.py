@@ -1,38 +1,28 @@
-from api.pagination import PageToLimitOffsetPagination
-from api.users.serializers import (AvatarSerializer,
-                                   CustomUserCreateSerializer,
-                                   CustomUserSerializer,
-                                   PasswordChangeSerializer,
-                                   SubscriptionDetailSerializer,
-                                   TokenSerializer)
+from http import HTTPStatus
+
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
-from recipes.models import Recipe
+
 from rest_framework.decorators import action
-from rest_framework.mixins import CreateModelMixin
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.viewsets import ModelViewSet
+
+from api.pagination import PageToLimitOffsetPagination
+from api.users.serializers import (
+    AvatarSerializer,
+    CustomPasswordChangeSerializer,
+    CustomUserCreateSerializer,
+    CustomUserSerializer,
+    SubscriptionDetailSerializer,
+    SubscriptionSerializer,
+)
 from users.models import Subscription
 
+
 User = get_user_model()
-
-
-class UserVerificationViewSet(GenericViewSet, CreateModelMixin):
-    """Custom viewset for working with tokens: login and logout."""
-
-    serializer_class = TokenSerializer
-    permission_classes = [AllowAny]
-
-    @action(detail=False, methods=['post'], url_path='login')
-    def login(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data, status=200)
-
-    @action(detail=False, methods=['post'], url_path='logout')
-    def logout(self, request):
-        return Response(status=204)
 
 
 class UsersViewSet(ModelViewSet):
@@ -61,6 +51,8 @@ class UsersViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def me(self, request):
+        """Retrieve or update current user's profile."""
+
         if request.method == 'GET':
             serializer = self.get_serializer(request.user)
             return Response(serializer.data)
@@ -76,6 +68,23 @@ class UsersViewSet(ModelViewSet):
 
     @action(
         detail=False,
+        methods=['post'],
+        url_path='set_password',
+        permission_classes=[IsAuthenticated]
+    )
+    def set_password(self, request):
+        """Allow password change using POST method."""
+
+        serializer = CustomPasswordChangeSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=HTTPStatus.NO_CONTENT)
+
+    @action(
+        detail=False,
         methods=['put', 'delete'],
         url_path='me/avatar',
         permission_classes=[IsAuthenticated]
@@ -88,31 +97,18 @@ class UsersViewSet(ModelViewSet):
         if request.method == 'PUT':
             if 'avatar' not in request.data:
                 return Response({"avatar": "This field is required."},
-                                status=400)
+                                status=HTTPStatus.BAD_REQUEST)
             serializer = AvatarSerializer(user, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response({"avatar": serializer.data['avatar']}, status=200)
+            return Response(
+                {"avatar": serializer.data['avatar']}, status=HTTPStatus.OK
+            )
 
         elif request.method == 'DELETE':
             if user.avatar:
                 user.avatar.delete()
-            return Response(status=204)
-
-    @action(
-        detail=False, methods=['post'],
-        url_path='set_password',
-        permission_classes=[IsAuthenticated]
-    )
-    def set_password(self, request):
-        serializer = PasswordChangeSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        request.user.set_password(serializer.validated_data['new_password'])
-        request.user.save()
-        return Response(status=204)
+            return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
         detail=False,
@@ -124,20 +120,16 @@ class UsersViewSet(ModelViewSet):
         """Retrieve the list of subscriptions with detailed information."""
 
         subscriptions = Subscription.objects.filter(
-            user=request.user).select_related('author')
-        paginated_subscriptions = self.paginate_queryset(subscriptions)
-
-        recipes_limit = request.query_params.get('recipes_limit')
-        recipes_limit = (
-            int(recipes_limit)
-            if recipes_limit and recipes_limit.isdigit()
-            else None
+            user=request.user
+        ).select_related('author').annotate(
+            recipes_count=Count('author__recipes')
         )
+        paginated_subscriptions = self.paginate_queryset(subscriptions)
 
         serializer = SubscriptionDetailSerializer(
             paginated_subscriptions,
             many=True,
-            context={'request': request, 'recipes_limit': recipes_limit}
+            context={'request': request}
         )
         return self.get_paginated_response(serializer.data)
 
@@ -153,66 +145,53 @@ class UsersViewSet(ModelViewSet):
         author = get_object_or_404(User, pk=pk)
 
         if request.user == author:
-            return Response({"detail": "You cannot subscribe to yourself"},
-                            status=400)
+            return Response(
+                {"detail": "You cannot subscribe to yourself"},
+                status=HTTPStatus.BAD_REQUEST
+            )
 
         if request.method == 'POST':
             if Subscription.objects.filter(user=request.user,
                                            author=author).exists():
                 return Response(
                     {"detail": "You are already subscribed to this user"},
-                    status=400
+                    status=HTTPStatus.BAD_REQUEST
                 )
 
-            Subscription.objects.create(user=request.user, author=author)
-
-            recipes_limit = request.query_params.get('recipes_limit', None)
             try:
-                recipes_limit = int(recipes_limit) if recipes_limit else None
-            except ValueError:
-                return Response(
-                    {"detail": "recipes_limit must be a number"},
-                    status=400
+                serializer = SubscriptionSerializer(
+                    data={'author': author.id},
+                    context={'request': request}
                 )
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
 
-            recipes = Recipe.objects.filter(author=author)
-            if recipes_limit:
-                recipes = recipes[:recipes_limit]
+                subscription = Subscription.objects.filter(
+                    user=request.user, author=author
+                ).annotate(recipes_count=Count('author__recipes')).first()
 
-            recipes_data = [
-                {
-                    "id": recipe.id,
-                    "name": recipe.name,
-                    "image": request.build_absolute_uri(
-                        recipe.image.url) if recipe.image else None,
-                    "cooking_time": recipe.cooking_time,
-                }
-                for recipe in recipes
-            ]
-
-            response_data = {
-                "id": author.id,
-                "username": author.username,
-                "first_name": author.first_name,
-                "last_name": author.last_name,
-                "email": author.email,
-                "is_subscribed": True,
-                "avatar": request.build_absolute_uri(
-                    author.avatar.url) if author.avatar else None,
-                "recipes_count": Recipe.objects.filter(author=author).count(),
-                "recipes": recipes_data,
-            }
-            return Response(response_data, status=201)
+                return Response(
+                    SubscriptionDetailSerializer(
+                        subscription,
+                        context={'request': request}
+                    ).data,
+                    status=HTTPStatus.CREATED
+                )
+            except IntegrityError:
+                return Response(
+                    {
+                        "detail": "Failed to create "
+                                  "subscription due to a conflict."},
+                    status=HTTPStatus.BAD_REQUEST
+                )
 
         if request.method == 'DELETE':
-            subscription = Subscription.objects.filter(user=request.user,
-                                                       author=author)
-            if not subscription.exists():
+            deleted_count, _ = Subscription.objects.filter(
+                user=request.user, author=author
+            ).delete()
+            if deleted_count == 0:
                 return Response(
                     {"detail": "You are not subscribed to this user"},
-                    status=400
+                    status=HTTPStatus.BAD_REQUEST
                 )
-
-            subscription.delete()
-            return Response({"detail": "You have successfully unsubscribed"},
-                            status=204)
+            return Response(status=HTTPStatus.NO_CONTENT)

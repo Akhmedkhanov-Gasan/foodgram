@@ -1,19 +1,26 @@
-from api.pagination import PageToLimitOffsetPagination
-from api.permissions import IsAuthorOrReadOnly
-from api.recipes.filters import RecipeFilter
-from api.recipes.serializers import (IngredientSerializer,
-                                     RecipeCreateSerializer, RecipeSerializer,
-                                     TagSerializer)
 from django.db.models import F, Sum
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from api.pagination import PageToLimitOffsetPagination
+from api.permissions import IsAuthorOrReadOnly
+from api.recipes.filters import IngredientFilter, RecipeFilter
+from api.recipes.serializers import (
+    FavoriteSerializer,
+    IngredientSerializer,
+    RecipeCreateSerializer,
+    RecipeSerializer,
+    ShoppingCartSerializer,
+    TagSerializer,
+)
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -46,14 +53,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def manage_favorite(self, request, pk=None):
         """Add or remove a recipe from favorites."""
         recipe = self.get_object()
-        return self._handle_interaction(request, recipe, Favorite)
+        serializer = FavoriteSerializer if request.method == 'POST' else None
+        return self._handle_interaction(request, recipe, Favorite, serializer)
 
     @action(detail=True, methods=['post', 'delete'], url_path='shopping_cart',
             permission_classes=[IsAuthenticated])
     def manage_shopping_cart(self, request, pk=None):
         """Add or remove a recipe from the shopping cart."""
         recipe = self.get_object()
-        return self._handle_interaction(request, recipe, ShoppingCart)
+        serializer = (
+            ShoppingCartSerializer if request.method == 'POST' else None
+        )
+        return self._handle_interaction(
+            request,
+            recipe,
+            ShoppingCart,
+            serializer
+        )
 
     @action(detail=True, methods=['get'], url_path='get-link')
     @permission_classes([AllowAny])
@@ -65,31 +81,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
-    def _handle_interaction(self, request, recipe, interaction_model):
+    def _handle_interaction(self, request, recipe, interaction_model,
+                            serializer_class=None):
         """Helper function to manage interactions (favorite, shopping cart)."""
 
         user = request.user
 
         if request.method == 'POST':
-            if interaction_model.objects.filter(user=user,
-                                                recipe=recipe).exists():
-                return Response(
-                    {
-                        "detail": (
-                            f"Recipe is already in the "
-                            f"{interaction_model.__name__.lower()}"
-                        )},
-                    status=status.HTTP_400_BAD_REQUEST
+            if serializer_class:
+                serializer = serializer_class(
+                    data={},
+                    context={'request': request, 'recipe': recipe}
                 )
-            interaction_model.objects.create(user=user, recipe=recipe)
-            response_data = {
-                "id": recipe.id,
-                "name": recipe.name,
-                "image": request.build_absolute_uri(
-                    recipe.image.url) if recipe.image else None,
-                "cooking_time": recipe.cooking_time,
-            }
-            return Response(response_data, status=status.HTTP_201_CREATED)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user=user)
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             interaction_item = interaction_model.objects.filter(user=user,
@@ -124,12 +131,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .order_by('name')
         )
 
-        if not ingredients:
-            return Response(
-                {"detail": "The shopping cart is empty"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         file_content = self._generate_shopping_list_file(ingredients)
 
         response = HttpResponse(
@@ -144,7 +145,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def _generate_shopping_list_file(self, ingredients):
         shopping_list = "\n".join(
             f"{item['name']} ({item['measurement_unit']}) "
-            f"— {item['total_amount']}"
+            f"â€” {item['total_amount']}"
             for item in ingredients
         )
         return shopping_list
@@ -156,20 +157,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.request.query_params.get('name')
-        if name:
-            queryset = queryset.filter(name__icontains=name)
-        return queryset
-
-    def list(self, request, *args, **kwargs):
-        """Return plain list of ingredients without pagination."""
-
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    filterset_class = IngredientFilter
+    pagination_class = None
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

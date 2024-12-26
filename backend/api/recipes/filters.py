@@ -1,5 +1,6 @@
+from recipes.models import Ingredient, Recipe
+
 from django_filters import rest_framework as filters
-from recipes.models import Recipe
 
 
 class RecipeFilter(filters.FilterSet):
@@ -37,8 +38,14 @@ class RecipeFilter(filters.FilterSet):
     def filter_by_tags(self, queryset, name, value):
         """Filter recipes by tag slugs."""
 
-        tag_slugs = self.request.query_params.getlist(
-            'tags')
-        filtered_queryset = queryset.filter(
-            tags__slug__in=tag_slugs).distinct()
-        return filtered_queryset
+        tag_slugs = self.request.query_params.getlist('tags')
+        return queryset.filter(tags__slug__in=tag_slugs).distinct()
+
+
+class IngredientFilter(filters.FilterSet):
+
+    name = filters.CharFilter(field_name='name', lookup_expr='icontains')
+
+    class Meta:
+        model = Ingredient
+        fields = ['name']

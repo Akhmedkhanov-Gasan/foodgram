@@ -1,13 +1,19 @@
-from api.users.managers import CustomUserManager
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import (EmailValidator, MaxLengthValidator,
-                                    RegexValidator)
+from django.core.validators import (
+    EmailValidator,
+    MaxLengthValidator,
+    RegexValidator,
+)
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from users.managers import CustomUserManager
 
-class UserProfile(AbstractUser):
+
+class User(AbstractUser):
+    """Custom user model."""
+
     email = models.EmailField(
         _('email address'),
         unique=True,
@@ -16,7 +22,7 @@ class UserProfile(AbstractUser):
             MaxLengthValidator(254, _('Email cannot exceed 254 characters')),
         ],
         error_messages={
-            'unique': _("A user with that email already exists."),
+            'unique': _('A user with that email already exists.'),
         },
     )
     username = models.CharField(
@@ -30,14 +36,13 @@ class UserProfile(AbstractUser):
             )
         ],
         error_messages={
-            'unique': _("A user with that username already exists."),
+            'unique': _('A user with that username already exists.'),
         },
     )
     first_name = models.CharField(
         _('first name'),
         max_length=150,
         blank=False
-
     )
     last_name = models.CharField(
         _('last name'),
@@ -53,19 +58,21 @@ class UserProfile(AbstractUser):
     )
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     objects = CustomUserManager()
 
     class Meta:
-        verbose_name = _('user profile')
-        verbose_name_plural = _('user profiles')
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
 
     def __str__(self):
         return self.username
 
 
 class Subscription(models.Model):
+    """Model for user subscriptions."""
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

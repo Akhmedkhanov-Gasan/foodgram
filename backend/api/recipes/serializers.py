@@ -1,8 +1,9 @@
+from rest_framework import serializers
+
 from api.users.serializers import CustomUserSerializer
 from api.utils import Base64ImageField
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
-from rest_framework import serializers
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -32,7 +33,6 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
-    amount = serializers.FloatField()
 
     class Meta:
         model = RecipeIngredient
@@ -121,20 +121,14 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
         tags_data = validated_data.pop('tags', None)
 
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time', instance.cooking_time
-        )
-        if validated_data.get('image'):
-            instance.image = validated_data.get('image')
-        instance.save()
+        instance = super().update(instance, validated_data)
 
         if tags_data is not None:
             instance.tags.set(tags_data)
 
         if ingredients_data is not None:
-            self.validate_ingredients(ingredients_data)
+            self.validate_ingredients(
+                ingredients_data)
             instance.recipe_ingredients.all().delete()
             self.save_ingredients(instance, ingredients_data)
 
@@ -179,14 +173,63 @@ class RecipeSerializer(serializers.ModelSerializer):
 class ShoppingCartSerializer(serializers.ModelSerializer):
     """Serializer for the shopping cart."""
 
+    id = serializers.ReadOnlyField(source='recipe.id')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    image = serializers.ImageField(source='recipe.image', read_only=True)
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
     class Meta:
         model = ShoppingCart
-        fields = ['id', 'recipe']
+        fields = ['id', 'name', 'image', 'cooking_time']
+
+    def validate(self, attrs):
+        """Check if the recipe is already in the shopping cart."""
+        user = self.context['request'].user
+        recipe = self.context['recipe']
+        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                {"detail": "Recipe is already in the shopping cart."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        recipe = self.context['recipe']
+        user = self.context['request'].user
+        return ShoppingCart.objects.create(user=user, recipe=recipe)
+
+    def create(self, validated_data):
+        """Ensure 'recipe' is set during creation."""
+        recipe = self.context['recipe']
+        user = self.context['request'].user
+        return ShoppingCart.objects.create(user=user, recipe=recipe)
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
     """Serializer for managing favorites."""
 
+    id = serializers.ReadOnlyField(source='recipe.id')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    image = serializers.ImageField(source='recipe.image', read_only=True)
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
     class Meta:
         model = Favorite
-        fields = ['id', 'recipe']
+        fields = ['id', 'name', 'image', 'cooking_time']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        recipe = self.context.get('recipe')
+        if not recipe:
+            raise serializers.ValidationError(
+                {"detail": "Recipe is required."}
+            )
+        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                {"detail": "Recipe is already in favorites."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        recipe = self.context['recipe']
+        user = self.context['request'].user
+        return Favorite.objects.create(user=user, recipe=recipe)

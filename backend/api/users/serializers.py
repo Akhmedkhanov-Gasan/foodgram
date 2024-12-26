@@ -1,12 +1,12 @@
-from api.utils import Base64ImageField
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
+
 from djoser.serializers import UserCreateSerializer
 from djoser.serializers import UserSerializer as DjoserUserSerializer
-from recipes.models import Recipe
+
 from rest_framework import serializers
-from rest_framework.serializers import CharField
-from rest_framework_simplejwt.tokens import AccessToken
+
+from api.utils import Base64ImageField
+from recipes.models import Recipe
 from users.models import Subscription
 
 User = get_user_model()
@@ -47,9 +47,36 @@ class CustomUserSerializer(DjoserUserSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
-        return user.is_authenticated and (
-            obj.followers.filter(user=user)
+        return user.is_authenticated and Subscription.objects.filter(
+            user=user, author=obj
         ).exists()
+
+
+class CustomPasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        """Validate that the current password is correct."""
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Wrong password.")
+        return value
+
+    def validate_new_password(self, value):
+        """Optional: Add custom validation for new password."""
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long."
+            )
+        return value
+
+    def save(self, **kwargs):
+        """Set the new password for the user."""
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
@@ -71,7 +98,7 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField()
 
     class Meta:
         model = Subscription
@@ -81,7 +108,10 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_subscribed(self, obj):
-        return True
+        user = self.context.get('request').user
+        return user.is_authenticated and Subscription.objects.filter(
+            user=user, author=obj.author
+        ).exists()
 
     def get_avatar(self, obj):
         request = self.context.get('request')
@@ -90,21 +120,26 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
         return None
 
     def get_recipes(self, obj):
-        request = self.context.get('request')
-        recipes_limit = self.context.get('recipes_limit')
+        """Retrieve author's recipes with an optional limit."""
 
-        if recipes_limit and isinstance(recipes_limit, int):
-            recipes = obj.author.recipes.all()[:recipes_limit]
-        else:
-            recipes = obj.author.recipes.all()
+        request = self.context.get('request')
+        recipes_limit = request.query_params.get(
+            'recipes_limit')
+
+        try:
+            recipes_limit = int(recipes_limit) if recipes_limit else None
+        except (ValueError, TypeError):
+            recipes_limit = None
+
+        recipes_query = obj.author.recipes.all()
+        if recipes_limit is not None:
+            recipes_query = recipes_query[:recipes_limit]
 
         return RecipeShortSerializer(
-            recipes,
+            recipes_query,
             many=True,
-            context={'request': request}).data
-
-    def get_recipes_count(self, obj):
-        return obj.author.recipes.count()
+            context={'request': request}
+        ).data
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -117,44 +152,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'author']
         read_only_fields = ['user']
 
-
-class TokenSerializer(serializers.Serializer):
-    """Serializer for obtaining a token using email and password."""
-
-    email = serializers.EmailField(write_only=True)
-    password = serializers.CharField(write_only=True)
-    token = serializers.CharField(read_only=True)
-
-    def validate(self, data):
-        email = data.get("email")
-        password = data.get("password")
-
-        try:
-            user = User.objects.get(email=email)
-            if not check_password(password, user.password):
-                raise serializers.ValidationError("Invalid email or password")
-        except User.DoesNotExist:
-            raise serializers.ValidationError("Invalid email or password")
-
-        token = AccessToken.for_user(user)
-        return {"auth_token": str(token)}
-
-
-class PasswordChangeSerializer(serializers.Serializer):
-    """Serializer for changing the user's password."""
-
-    current_password = CharField(write_only=True, required=True)
-    new_password = CharField(write_only=True, required=True)
-
-    def validate_current_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError('Current password is incorrect.')
-        return value
-
-    def validate_new_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError(
-                'Password must be at least 8 characters long.'
-            )
-        return value
+    def create(self, validated_data):
+        """Set the user field to the currently authenticated user."""
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

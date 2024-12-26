@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Subscription, UserProfile
+from .models import Subscription, User
 
 
 @admin.register(Subscription)
@@ -24,7 +24,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return obj.author.username
 
 
-@admin.register(UserProfile)
+@admin.register(User)
 class UserProfileAdmin(admin.ModelAdmin):
     """Admin panel for managing user profiles."""
     list_display = ('username', 'email', 'first_name', 'last_name', 'avatar')

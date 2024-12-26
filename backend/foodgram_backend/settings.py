@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'rest_framework.authtoken',
 
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
@@ -112,7 +113,7 @@ STATIC_ROOT = BASE_DIR / 'collected_static'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -132,7 +133,7 @@ SIMPLE_JWT = {
 }
 
 DJOSER = {
-    'USER_CREATE_PASSWORD_RETYPE': False,
+    'USER_CREATE_PASSWORD_RETYPE': True,
     'USERNAME_CHANGED_EMAIL_CONFIRMATION': False,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': False,
     'SEND_CONFIRMATION_EMAIL': False,
@@ -143,7 +144,7 @@ DJOSER = {
     },
 }
 
-AUTH_USER_MODEL = 'users.UserProfile'
+AUTH_USER_MODEL = 'users.User'
 
 LANGUAGE_CODE = 'en-us'
 
