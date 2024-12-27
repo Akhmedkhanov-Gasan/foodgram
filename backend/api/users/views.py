@@ -1,7 +1,6 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 
@@ -96,13 +95,13 @@ class UsersViewSet(ModelViewSet):
 
         if request.method == 'PUT':
             if 'avatar' not in request.data:
-                return Response({"avatar": "This field is required."},
+                return Response({'avatar': 'This field is required.'},
                                 status=HTTPStatus.BAD_REQUEST)
             serializer = AvatarSerializer(user, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(
-                {"avatar": serializer.data['avatar']}, status=HTTPStatus.OK
+                {'avatar': serializer.data['avatar']}, status=HTTPStatus.OK
             )
 
         elif request.method == 'DELETE':
@@ -144,46 +143,25 @@ class UsersViewSet(ModelViewSet):
 
         author = get_object_or_404(User, pk=pk)
 
-        if request.user == author:
-            return Response(
-                {"detail": "You cannot subscribe to yourself"},
-                status=HTTPStatus.BAD_REQUEST
-            )
-
         if request.method == 'POST':
-            if Subscription.objects.filter(user=request.user,
-                                           author=author).exists():
-                return Response(
-                    {"detail": "You are already subscribed to this user"},
-                    status=HTTPStatus.BAD_REQUEST
-                )
+            serializer = SubscriptionSerializer(
+                data={'author': author.id},
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
-            try:
-                serializer = SubscriptionSerializer(
-                    data={'author': author.id},
+            subscription = Subscription.objects.filter(
+                user=request.user, author=author
+            ).annotate(recipes_count=Count('author__recipes')).first()
+
+            return Response(
+                SubscriptionDetailSerializer(
+                    subscription,
                     context={'request': request}
-                )
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-
-                subscription = Subscription.objects.filter(
-                    user=request.user, author=author
-                ).annotate(recipes_count=Count('author__recipes')).first()
-
-                return Response(
-                    SubscriptionDetailSerializer(
-                        subscription,
-                        context={'request': request}
-                    ).data,
-                    status=HTTPStatus.CREATED
-                )
-            except IntegrityError:
-                return Response(
-                    {
-                        "detail": "Failed to create "
-                                  "subscription due to a conflict."},
-                    status=HTTPStatus.BAD_REQUEST
-                )
+                ).data,
+                status=HTTPStatus.CREATED
+            )
 
         if request.method == 'DELETE':
             deleted_count, _ = Subscription.objects.filter(
@@ -191,7 +169,7 @@ class UsersViewSet(ModelViewSet):
             ).delete()
             if deleted_count == 0:
                 return Response(
-                    {"detail": "You are not subscribed to this user"},
+                    {'detail': 'You are not subscribed to this user'},
                     status=HTTPStatus.BAD_REQUEST
                 )
             return Response(status=HTTPStatus.NO_CONTENT)

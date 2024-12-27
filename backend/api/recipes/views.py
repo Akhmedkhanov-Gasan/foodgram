@@ -52,6 +52,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def manage_favorite(self, request, pk=None):
         """Add or remove a recipe from favorites."""
+
         recipe = self.get_object()
         serializer = FavoriteSerializer if request.method == 'POST' else None
         return self._handle_interaction(request, recipe, Favorite, serializer)
@@ -60,6 +61,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def manage_shopping_cart(self, request, pk=None):
         """Add or remove a recipe from the shopping cart."""
+
         recipe = self.get_object()
         serializer = (
             ShoppingCartSerializer if request.method == 'POST' else None
@@ -75,6 +77,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @permission_classes([AllowAny])
     def get_link(self, request, pk=None):
         """Get short link"""
+
         recipe = self.get_object()
         base_url = request.build_absolute_uri('/')
         short_link = f"{base_url.rstrip('/')}/s/{recipe.id}"
@@ -101,17 +104,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'DELETE':
             interaction_item = interaction_model.objects.filter(user=user,
                                                                 recipe=recipe)
-            if not interaction_item.exists():
+            deleted_count, _ = interaction_item.delete()
+            if deleted_count == 0:
                 return Response(
                     {
-                        "detail": (
-                            f"Recipe is not in the "
-                            f"{interaction_model.__name__.lower()}"
-                        )},
+                        'detail': (
+                            f'Recipe is not in the '
+                            f'{interaction_model.__name__.lower()}'
+                        )
+                    },
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            interaction_item.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False, methods=['get'], url_path='download_shopping_cart',
@@ -143,9 +148,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
     def _generate_shopping_list_file(self, ingredients):
-        shopping_list = "\n".join(
-            f"{item['name']} ({item['measurement_unit']}) "
-            f"â€” {item['total_amount']}"
+        """Generate a shopping list file from ingredients."""
+
+        shopping_list = '\n'.join(
+            f'{item["name"]} ({item["measurement_unit"]})'
+            f' — {item["total_amount"]}'
             for item in ingredients
         )
         return shopping_list

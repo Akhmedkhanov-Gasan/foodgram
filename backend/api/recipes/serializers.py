@@ -66,25 +66,25 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def validate_tags(self, tags):
         if len(tags) != len(set(tags)):
-            raise serializers.ValidationError("Tags must be unique.")
+            raise serializers.ValidationError('Tags must be unique.')
         return tags
 
     def validate_ingredients(self, ingredients):
         if not ingredients:
             raise serializers.ValidationError(
-                "The ingredient list cannot be empty."
+                'The ingredient list cannot be empty.'
             )
 
         unique_ingredients = set()
         for ingredient in ingredients:
             if ingredient['amount'] <= 0:
                 raise serializers.ValidationError(
-                    "Ingredient amount must be greater than 0."
+                    'Ingredient amount must be greater than 0.'
                 )
             ingredient_id = ingredient['ingredient'].id
             if ingredient_id in unique_ingredients:
                 raise serializers.ValidationError(
-                    "Ingredients must not be duplicated."
+                    'Ingredients must not be duplicated.'
                 )
             unique_ingredients.add(ingredient_id)
         return ingredients
@@ -92,10 +92,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if not attrs.get('recipe_ingredients'):
             raise serializers.ValidationError(
-                {"ingredients": "Ingredients are required."}
+                {'ingredients': 'Ingredients are required.'}
             )
         if not attrs.get('tags'):
-            raise serializers.ValidationError({"tags": "Tags are required."})
+            raise serializers.ValidationError({'tags': 'Tags are required.'})
         return attrs
 
     def save_ingredients(self, recipe, ingredients_data):
@@ -119,12 +119,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
-        tags_data = validated_data.pop('tags', None)
 
         instance = super().update(instance, validated_data)
-
-        if tags_data is not None:
-            instance.tags.set(tags_data)
 
         if ingredients_data is not None:
             self.validate_ingredients(
@@ -188,12 +184,13 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         recipe = self.context['recipe']
         if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
             raise serializers.ValidationError(
-                {"detail": "Recipe is already in the shopping cart."}
+                {'detail': 'Recipe is already in the shopping cart.'}
             )
         return attrs
 
     def create(self, validated_data):
         """Ensure 'recipe' is set during creation."""
+
         recipe = self.context['recipe']
         user = self.context['request'].user
         return ShoppingCart.objects.create(user=user, recipe=recipe)
@@ -216,11 +213,11 @@ class FavoriteSerializer(serializers.ModelSerializer):
         recipe = self.context.get('recipe')
         if not recipe:
             raise serializers.ValidationError(
-                {"detail": "Recipe is required."}
+                {'detail': 'Recipe is required.'}
             )
         if Favorite.objects.filter(user=user, recipe=recipe).exists():
             raise serializers.ValidationError(
-                {"detail": "Recipe is already in favorites."}
+                {'detail': 'Recipe is already in favorites.'}
             )
         return attrs
 

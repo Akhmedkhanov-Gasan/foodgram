@@ -22,16 +22,12 @@ class RecipeAdmin(admin.ModelAdmin):
     inlines = [RecipeIngredientInline]
 
     def get_queryset(self, request):
-        """Annotate queryset with the number of times recipes are favorited."""
-
         queryset = super().get_queryset(request)
         return queryset.annotate(
             favorites_count=Count('favorited_by')
         )
 
     def get_favorites_count(self, obj):
-        """Display the annotated favorites count."""
-
         return getattr(obj, 'favorites_count', 0)
 
     get_favorites_count.short_description = 'Favorites Count'

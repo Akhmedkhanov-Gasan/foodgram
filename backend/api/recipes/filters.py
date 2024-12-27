@@ -16,8 +16,6 @@ class RecipeFilter(filters.FilterSet):
         fields = ['author', 'tags', 'is_favorited', 'is_in_shopping_cart']
 
     def filter_is_favorited(self, queryset, name, value):
-        """Filter recipes by whether they are in the user's favorites."""
-
         user = self.request.user
         if not user.is_authenticated:
             return queryset.none()
@@ -26,8 +24,6 @@ class RecipeFilter(filters.FilterSet):
         return queryset.exclude(favorited_by__user=user)
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        """Filter recipes by whether they are in the user's shopping cart."""
-
         user = self.request.user
         if not user.is_authenticated:
             return queryset.none()
@@ -36,14 +32,11 @@ class RecipeFilter(filters.FilterSet):
         return queryset.exclude(shopping_cart__user=user)
 
     def filter_by_tags(self, queryset, name, value):
-        """Filter recipes by tag slugs."""
-
         tag_slugs = self.request.query_params.getlist('tags')
         return queryset.filter(tags__slug__in=tag_slugs).distinct()
 
 
 class IngredientFilter(filters.FilterSet):
-
     name = filters.CharFilter(field_name='name', lookup_expr='icontains')
 
     class Meta:

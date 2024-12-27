@@ -58,21 +58,24 @@ class CustomPasswordChangeSerializer(serializers.Serializer):
 
     def validate_current_password(self, value):
         """Validate that the current password is correct."""
+
         user = self.context['request'].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Wrong password.")
+            raise serializers.ValidationError('Wrong password.')
         return value
 
     def validate_new_password(self, value):
         """Optional: Add custom validation for new password."""
+
         if len(value) < 8:
             raise serializers.ValidationError(
-                "Password must be at least 8 characters long."
+                'Password must be at least 8 characters long.'
             )
         return value
 
     def save(self, **kwargs):
         """Set the new password for the user."""
+
         user = self.context['request'].user
         user.set_password(self.validated_data['new_password'])
         user.save()
@@ -123,12 +126,12 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
         """Retrieve author's recipes with an optional limit."""
 
         request = self.context.get('request')
-        recipes_limit = request.query_params.get(
-            'recipes_limit')
+        recipes_limit = request.query_params.get('recipes_limit')
 
-        try:
-            recipes_limit = int(recipes_limit) if recipes_limit else None
-        except (ValueError, TypeError):
+        if recipes_limit and isinstance(recipes_limit,
+                                        str) and recipes_limit.isdigit():
+            recipes_limit = int(recipes_limit)
+        else:
             recipes_limit = None
 
         recipes_query = obj.author.recipes.all()
@@ -152,7 +155,22 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'author']
         read_only_fields = ['user']
 
+    def validate_author(self, value):
+        """Validate the author field for subscription constraints."""
+
+        user = self.context['request'].user
+        if user == value:
+            raise serializers.ValidationError(
+                'You cannot subscribe to yourself.'
+            )
+        if Subscription.objects.filter(user=user, author=value).exists():
+            raise serializers.ValidationError(
+                'You are already subscribed to this user.'
+            )
+        return value
+
     def create(self, validated_data):
         """Set the user field to the currently authenticated user."""
+
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
