@@ -121,6 +121,44 @@ Foodgram is a platform where users can share, discover, and save recipes. Users 
     sudo service nginx reload
     ```
 
+11. Creating a Superuser
+
+To access the admin panel, you'll need to create a superuser. Follow these steps:
+
+1. **Check the name of your backend container**:
+   Run the following command to list all running containers:
+   ```bash
+   sudo docker ps
+   ```
+   Look for the container running the backend service (e.g., `foodgram-backend-1`).
+
+2. **Access the backend container**:
+   Replace `<container_name>` with the name of your backend container and run:
+   ```bash
+   sudo docker exec -it <container_name> bash
+   ```
+
+3. **Run the `createsuperuser` command**:
+   Inside the container, execute the following command:
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+4. **Follow the prompts**:
+   - Enter the desired **username**.
+   - Provide an **email address**.
+   - Set a **password**.
+
+   Once the superuser is created, you'll see a confirmation message.
+
+5. **Access the admin panel**:
+   Navigate to the admin panel at:
+   ```
+   https://<your-domain-or-ip>/admin
+   ```
+   Use the credentials you created to log in.
+
+
 ### CI/CD Setup
 
 1. The workflow file is already written and located at:

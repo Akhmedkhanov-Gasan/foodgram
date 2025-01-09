@@ -51,7 +51,6 @@ class UsersViewSet(ModelViewSet):
     )
     def me(self, request):
         """Retrieve or update current user's profile."""
-
         if request.method == 'GET':
             serializer = self.get_serializer(request.user)
             return Response(serializer.data)
@@ -73,7 +72,6 @@ class UsersViewSet(ModelViewSet):
     )
     def set_password(self, request):
         """Allow password change using POST method."""
-
         serializer = CustomPasswordChangeSerializer(
             data=request.data,
             context={'request': request}
@@ -90,7 +88,6 @@ class UsersViewSet(ModelViewSet):
     )
     def avatar(self, request):
         """Upload or delete user's avatar."""
-
         user = request.user
 
         if request.method == 'PUT':
@@ -117,7 +114,6 @@ class UsersViewSet(ModelViewSet):
     )
     def subscriptions(self, request):
         """Retrieve the list of subscriptions with detailed information."""
-
         subscriptions = Subscription.objects.filter(
             user=request.user
         ).select_related('author').annotate(
@@ -140,7 +136,6 @@ class UsersViewSet(ModelViewSet):
     )
     def manage_subscription(self, request, pk=None):
         """Manage subscription to a user."""
-
         author = get_object_or_404(User, pk=pk)
 
         if request.method == 'POST':

@@ -124,12 +124,10 @@ class SubscriptionDetailSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         """Retrieve author's recipes with an optional limit."""
-
         request = self.context.get('request')
-        recipes_limit = request.query_params.get('recipes_limit')
+        recipes_limit = request.query_params.get('recipes_limit', 10)
 
-        if recipes_limit and isinstance(recipes_limit,
-                                        str) and recipes_limit.isdigit():
+        if isinstance(recipes_limit, str) and recipes_limit.isdigit():
             recipes_limit = int(recipes_limit)
         else:
             recipes_limit = None

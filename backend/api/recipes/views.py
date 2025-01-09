@@ -52,7 +52,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def manage_favorite(self, request, pk=None):
         """Add or remove a recipe from favorites."""
-
         recipe = self.get_object()
         serializer = FavoriteSerializer if request.method == 'POST' else None
         return self._handle_interaction(request, recipe, Favorite, serializer)
@@ -61,7 +60,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def manage_shopping_cart(self, request, pk=None):
         """Add or remove a recipe from the shopping cart."""
-
         recipe = self.get_object()
         serializer = (
             ShoppingCartSerializer if request.method == 'POST' else None
@@ -77,7 +75,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @permission_classes([AllowAny])
     def get_link(self, request, pk=None):
         """Get short link"""
-
         recipe = self.get_object()
         base_url = request.build_absolute_uri('/')
         short_link = f"{base_url.rstrip('/')}/s/{recipe.id}"
@@ -87,7 +84,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def _handle_interaction(self, request, recipe, interaction_model,
                             serializer_class=None):
         """Helper function to manage interactions (favorite, shopping cart)."""
-
         user = request.user
 
         if request.method == 'POST':
@@ -124,7 +120,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """Download shopping list."""
-
         ingredients = (
             request.user.shopping_cart
             .values(
@@ -149,7 +144,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def _generate_shopping_list_file(self, ingredients):
         """Generate a shopping list file from ingredients."""
-
         shopping_list = '\n'.join(
             f'{item["name"]} ({item["measurement_unit"]})'
             f' — {item["total_amount"]}'

@@ -118,15 +118,13 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('recipe_ingredients', None)
+        ingredients_data = validated_data.pop('recipe_ingredients')
 
         instance = super().update(instance, validated_data)
 
-        if ingredients_data is not None:
-            self.validate_ingredients(
-                ingredients_data)
-            instance.recipe_ingredients.all().delete()
-            self.save_ingredients(instance, ingredients_data)
+        self.validate_ingredients(ingredients_data)
+        instance.recipe_ingredients.all().delete()
+        self.save_ingredients(instance, ingredients_data)
 
         return instance
 
@@ -190,7 +188,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Ensure 'recipe' is set during creation."""
-
         recipe = self.context['recipe']
         user = self.context['request'].user
         return ShoppingCart.objects.create(user=user, recipe=recipe)
