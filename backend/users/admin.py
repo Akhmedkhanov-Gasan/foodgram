@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .models import Subscription, User
 
@@ -12,26 +13,44 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'user__username',
         'author__username',
         'user__email',
-        'author__email'
+        'author__email',
     )
-    list_filter = ('user__username', 'author__username')
-
-    def user(self, obj):
-        return obj.user.username
-
-    def author(self, obj):
-        return obj.author.username
+    list_filter = ('user', 'author')
 
 
 @admin.register(User)
-class UserProfileAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     """Admin panel for managing user profiles."""
 
-    list_display = ('username', 'email', 'first_name', 'last_name', 'avatar')
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'is_active',
+        'is_superuser'
+    )
     search_fields = ('username', 'email', 'first_name', 'last_name')
+    list_filter = ('is_active', 'is_superuser')
 
-    def username(self, obj):
-        return obj.username
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Permissions', {'fields': (
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'groups',
+            'user_permissions'
+        )}),
+        ('Important Dates', {'fields': ('last_login', 'date_joined')}),
+    )
 
-    def email(self, obj):
-        return obj.email
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2'),
+        }),
+    )
+
+    ordering = ('username',)

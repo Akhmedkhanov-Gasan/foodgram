@@ -58,10 +58,15 @@ class Recipe(models.Model):
             MaxValueValidator(1440, _('Cooking time cannot exceed 24 hours'))
         ]
     )
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name=_('created at'))
+    updated_at = models.DateTimeField(auto_now=True,
+                                      verbose_name=_('updated at'))
 
     class Meta:
         verbose_name = _('recipe')
         verbose_name_plural = _('recipes')
+        ordering = ['-created_at']
 
     def __str__(self):
         return self.name

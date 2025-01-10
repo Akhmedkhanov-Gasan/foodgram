@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_filters',
     'djoser',
+    'admin_auto_filters',
 
     'rest_framework',
     'corsheaders',
